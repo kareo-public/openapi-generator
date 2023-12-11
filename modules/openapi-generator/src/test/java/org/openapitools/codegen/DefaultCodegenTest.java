@@ -51,6 +51,7 @@ import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -671,6 +672,15 @@ public class DefaultCodegenTest {
         }
         Assert.assertTrue(typeSeen);
         Assert.assertTrue(typeContainsEnums);
+
+        Assert.assertEquals(
+                ((StringSchema) openAPI.getComponents().getSchemas().get("Dog").getProperties().get("type")).getEnum().size(),
+                1
+        );
+        Assert.assertEquals(
+                ((StringSchema) openAPI.getComponents().getSchemas().get("Cat").getProperties().get("type")).getEnum().size(),
+                1
+        );
     }
 
     @Test
@@ -4716,6 +4726,7 @@ public class DefaultCodegenTest {
         Assert.assertFalse(allOfEnumSchemaProperty.isString);
         Assert.assertFalse(allOfEnumSchemaProperty.isContainer);
         Assert.assertFalse(allOfEnumSchemaProperty.isPrimitiveType);
+        Assert.assertTrue(allOfEnumSchemaProperty.deprecated);
         Assert.assertEquals(allOfEnumSchemaProperty.defaultValue, "null");
     }
 
@@ -4792,9 +4803,24 @@ public class DefaultCodegenTest {
         assertNotNull(mt.getExample());
     }
 
-    @Test void testIsXML() {
+    @Test
+    void testIsXML() {
         final DefaultCodegen codegen = new DefaultCodegen();
         Assert.assertTrue(codegen.isXmlMimeType("application/xml"));
         Assert.assertTrue(codegen.isXmlMimeType("application/rss+xml"));
     }
+
+    @Test
+    public void testWebhooks() throws IOException {
+        final OpenAPI openAPI = TestUtils.parseFlattenSpec("src/test/resources/3_1/webhooks.yaml");
+        final DefaultCodegen codegen = new DefaultCodegen();
+        codegen.setOpenAPI(openAPI);
+
+        Operation operation = openAPI.getWebhooks().get("newPet").getPost();
+        CodegenOperation co = codegen.fromOperation("newPet", "get", operation, null);
+
+        Assert.assertEquals(co.path, "/newPet");
+        Assert.assertEquals(co.operationId, "newPetGet");
+    }
+
 }
